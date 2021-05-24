@@ -1,17 +1,58 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <div class="actions">
+      <button v-for="action in actions"
+        :key="action"
+        @click="setAction(action)">
+        {{ action || 'CLEAR' }}
+      </button>
+    </div>
+    <vue-fabricjs-wrapper
+      v-if="draw"
+      canvas-id="my-canvas"
+      :canvas-width="480"
+      :canvas-height="640"
+      :object-name="current"
+      @mouse:up="setAction(null)"
+    />
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import VueFabricjsWrapper from '@/components/VueFabricjsWrapper'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    VueFabricjsWrapper
+  },
+  data () {
+    return {
+      draw: false,
+      actions: [
+        'Circle',
+        'Triangle',
+        'Rect',
+        'Ellipse',
+        // 'Line',
+        // 'Polygon',
+        // 'Polyline',
+        'DELETE-ALL',
+        null
+      ],
+      current: null
+    }
+  },
+  methods: {
+    setAction(action) {
+      if (action === 'DELETE-ALL') {
+        return
+      }
+      this.current = action
+    }
+  },
+  mounted () {
+    this.draw = true
   }
 }
 </script>
@@ -21,8 +62,19 @@ export default {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+}
+.canvas-container {
+  margin: auto;
+  
+}
+.actions {
+  margin: 12px auto 12px auto;
+  width: 640px;
+  display: flex;
+  justify-content: space-between;
+}
+button {
+  cursor: pointer;
+  padding: 8px;
 }
 </style>
