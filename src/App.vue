@@ -34,10 +34,12 @@ export default {
         'Triangle',
         'Rect',
         'Ellipse',
+        'Paint',
         // 'Line',
         // 'Polygon',
         // 'Polyline',
         'DELETE-ALL',
+        'DELETE-ACTIVE',
         null
       ],
       current: null
@@ -45,10 +47,13 @@ export default {
   },
   methods: {
     setAction(action) {
-      if (action === 'DELETE-ALL') {
-        return
-      }
       this.current = action
+      if (action === 'DELETE-ALL' || action === 'DELETE-ACTIVE' ) {
+        this.$nextTick(() => {
+          this.current = null
+        })
+      }
+      
     }
   },
   mounted () {

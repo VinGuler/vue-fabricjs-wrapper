@@ -60,65 +60,47 @@
         }
         return { x, y }
       },
-      // DRAW OBJECTS FUNCTINS
-      drawRect(event) {
+      // DRAW OBJECTS FUNCTIONS
+      createObject(event) {
         const { x, y } = this.handleObjectPositionInCanvas(event.pointer)
         const options = {
           left: x,
           top: y,
-          width: 4,
-          height: 4,
           fill: this.fill
         }
-        this.current = new fabric.Rect(options)
-        this.canvas.add(this.current)
-        this.canvas.setActiveObject(this.current)
-      },
-      drawCircle(event) {
-        const { x, y } = this.handleObjectPositionInCanvas(event.pointer)
-        const options = {
-          left: x,
-          top: y,
-          radius: 4,
-          fill: this.fill
+
+        const shape = this.objectName
+      
+        switch (shape) {
+          case 'Circle': 
+            options.radius = 4
+            break
+          case 'Triangle': 
+            options.width = 8
+            options.height = 8
+            break
+          case 'Rect': 
+            options.width = 8
+            options.height = 8
+            break
+          case 'Ellipse': 
+            options.rx = 4
+            options.ty = 4
+            break
         }
-        this.current = new fabric.Circle(options)
-        this.canvas.add(this.current)
-        this.canvas.setActiveObject(this.current)
-      },
-      drawTriangle(event) {
-        const { x, y } = this.handleObjectPositionInCanvas(event.pointer)
-        const options = {
-          left: x,
-          top: y,
-          width: 4,
-          height: 4,
-          fill: this.fill
-        }
-        this.current = new fabric.Triangle(options)
-        this.canvas.add(this.current)
-        this.canvas.setActiveObject(this.current)
-      },
-      drawEllipse(event) {
-        const { x, y } = this.handleObjectPositionInCanvas(event.pointer)
-        const options = {
-          left: x,
-          top: y,
-          rx: 4,
-          ry: 4,
-          fill: this.fill
-        }
-        this.current = new fabric.Ellipse(options)
+        
+        this.current = new fabric[shape](options)
         this.canvas.add(this.current)
         this.canvas.setActiveObject(this.current)
       },
       // OBJECT EVENTS FUNCTIONS
-      onObjectMoving () {
+      onObjectMoving() {
         const active = this.canvas.getActiveObject()
         let { x, y } = this.handleObjectPositionInCanvas({ x: active.left, y: active.top, ...active })
         active.set({ top: y, left: x })
+        this.canvas.renderAll()
       },
-      onObjectScaling () {
+      onObjectScaling() {
         const active = this.canvas.getActiveObject()
         let { left: x, top: y, width, height, scaleX, scaleY } = active
         const newWidth = width * scaleX
@@ -136,10 +118,7 @@
       },
       // MOUSE EVENTS FUNCTIONS
       onMouseDown(event) {
-        if (!this.objectName) {
-          return
-        }
-        if (this.canvas.getActiveObject()) {
+        if (!this.objectName || this.canvas.getActiveObject() || this.objectName === 'Paint') {
           return
         }
 
@@ -148,21 +127,14 @@
         this.originalPointer.x = event.pointer.x
         this.originalPointer.y = event.pointer.y
 
-        
-
-        let drawFunctionName = 'draw'
-        drawFunctionName += this.objectName
-        if (this[drawFunctionName]) {
-          this[drawFunctionName](event)
-        }
+        this.createObject(event)
       },
       onMouseMove(event) {
-        if (!this.objectName) {
+        if (!this.objectName || !this.current || this.objectName === 'Paint') {
           return
         }
-        if (!this.current) {
-          return
-        }
+        
+        // This handles scalling the created shape
         let { x, y } = this.handleObjectPositionInCanvas(event.pointer)
         const { x: originalX, y: originalY } = this.originalPointer
         let change = {}
@@ -173,7 +145,7 @@
         if (originalY > y) {
           change.top = Math.abs(y)
         }
-        
+
         if (this.objectName === 'Rect') {
           change = {
             ...change,
@@ -187,13 +159,13 @@
             radius
           }
         } else if (this.objectName === 'Triangle') {
-           change = {
+          change = {
             ...change,
             width: Math.abs(x - originalX),
             height: Math.abs(y - originalY)
           }
         } else if (this.objectName === 'Ellipse') {
-           change = {
+          change = {
             ...change,
             rx: Math.abs(x - originalX) / 2,
             ry: Math.abs(y - originalY) / 2
@@ -203,26 +175,50 @@
         this.canvas.renderAll()
       },
       onMouseUp() {
-        // if (this.current) {
-        //   this.canvas.add(this.current)
-        // }
+        if (this.objectName === 'Paint') {
+          return
+        }
+        if (this.current) {
+          this.canvas.add(this.current)
+        }
         this.current = null
-        this.canvas.selection = true
-      },
-      onMouseDblclick(event) {
-        console.log('event', event)
-        const selected = this.canvas.getActiveObject()
-        console.log('selected', selected)
-        if (selected) {
-          this.canvas.remove(selected)
-          this.canvas.discardActiveObject()
+        this.canvas.renderAll()
+      }
+    },
+    watch: {
+      objectName(value) {
+        this.canvas.isDrawingMode = false
+        if (value) {
+          if (value === 'Paint') {
+            this.canvas.isDrawingMode = true
+          } else if (value === 'DELETE-ALL') {
+            this.canvas.clear()
+          }
+        } else {
+          this.canvas.selection = false
         }
       }
+    },
+    created() {
+      if (this.canvasId) {
+        this.canvasAttributes.id = this.canvasId
+      }
+      if (this.canvasWidth) {
+        this.canvasAttributes.width = this.canvasWidth
+      }
+      if (this.canvasHeight) {
+        this.canvasAttributes.height = this.canvasHeight
+      }
+    },
+    render(createElement) {
+      const attrs = this.canvasAttributes
+      const style = this.canvasStyle
+      return createElement('canvas', { attrs, style, ref: attrs.id })
     },
     mounted() {
       this.canvas = new fabric.Canvas(this.canvasAttributes.id)
       this.canvas.selection = true
-      this.canvas.renderOnAddRemove = true
+      // this.canvas.renderOnAddRemove = true
       const events = [
         // MOUSE EVENTS
         'mouse:down',
@@ -263,22 +259,6 @@
           })
         }
       }
-    },
-    created() {
-      if (this.canvasId) {
-        this.canvasAttributes.id = this.canvasId
-      }
-      if (this.canvasWidth) {
-        this.canvasAttributes.width = this.canvasWidth
-      }
-      if (this.canvasHeight) {
-        this.canvasAttributes.height = this.canvasHeight
-      }
-    },
-    render(createElement) {
-      const attrs = this.canvasAttributes
-      const style = this.canvasStyle
-      return createElement('canvas', { attrs, style, ref: attrs.id })
     }
   }
 </script>
