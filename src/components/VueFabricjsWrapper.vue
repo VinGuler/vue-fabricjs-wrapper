@@ -43,7 +43,12 @@
     },
     methods: {
       // UTILITY FUNCTIONS
-      handleObjectPositionInCanvas({ x, y, width = 0, height = 0, scaleX = 1, scaleY = 1 }) {
+      // Making sure the object is inside the canvas
+      handleObjectPositionInCanvas({ x, y, width = 0, height = 0, scaleX = 1, scaleY = 1, angle = 0 }) {
+        // TODO: Handle rotated Objcets
+        if (angle) {
+          return { x, y }
+        }
         width = width * scaleX
         height = height * scaleY
         if (x <= 0) {
@@ -62,33 +67,43 @@
       },
       // DRAW OBJECTS FUNCTIONS
       createObject(event) {
+        // Creating the object inside the canvas
         const { x, y } = this.handleObjectPositionInCanvas(event.pointer)
+        // Default options used for all the shapes
         const options = {
           left: x,
           top: y,
           fill: this.fill
         }
-
         const shape = this.objectName
-      
+        // Adding extra information based on the shape
         switch (shape) {
-          case 'Circle': 
+          case 'Circle':
             options.radius = 4
             break
-          case 'Triangle': 
+          case 'Triangle':
             options.width = 8
             options.height = 8
             break
-          case 'Rect': 
+          case 'Rect':
             options.width = 8
             options.height = 8
             break
-          case 'Ellipse': 
+          case 'Ellipse':
             options.rx = 4
             options.ty = 4
             break
+          case 'Line':
+            console.log('options', options)
+            options.x1 = options.left
+            options.y1 = options.top
+            options.strokeWidth = 8
+            options.stroke = 'black'
+            delete options.left
+            delete options.top
+            delete options.fill
+            break
         }
-        
         this.current = new fabric[shape](options)
         this.canvas.add(this.current)
         this.canvas.setActiveObject(this.current)
@@ -101,6 +116,7 @@
         this.canvas.renderAll()
       },
       onObjectScaling() {
+        // TODO: Handle object scaling in a negative direction (scaling to the top or to the left)
         const active = this.canvas.getActiveObject()
         let { left: x, top: y, width, height, scaleX, scaleY } = active
         const newWidth = width * scaleX
@@ -121,68 +137,60 @@
         if (!this.objectName || this.canvas.getActiveObject() || this.objectName === 'Paint') {
           return
         }
-
         this.canvas.selection = false
-
         this.originalPointer.x = event.pointer.x
         this.originalPointer.y = event.pointer.y
-
         this.createObject(event)
       },
       onMouseMove(event) {
         if (!this.objectName || !this.current || this.objectName === 'Paint') {
           return
         }
-        
         // This handles scalling the created shape
         let { x, y } = this.handleObjectPositionInCanvas(event.pointer)
         const { x: originalX, y: originalY } = this.originalPointer
-        let change = {}
-
-        if (originalX > x) {
-          change.left = Math.abs(x)
-        }
-        if (originalY > y) {
-          change.top = Math.abs(y)
-        }
+        let change
 
         if (this.objectName === 'Rect') {
           change = {
-            ...change,
             width: Math.abs(x - originalX),
             height: Math.abs(y - originalY)
           }
         } else if (this.objectName === 'Circle') {
           const radius = Math.abs(x - originalX) / 2
           change = {
-            ...change,
             radius
           }
         } else if (this.objectName === 'Triangle') {
           change = {
-            ...change,
             width: Math.abs(x - originalX),
             height: Math.abs(y - originalY)
           }
         } else if (this.objectName === 'Ellipse') {
           change = {
-            ...change,
             rx: Math.abs(x - originalX) / 2,
             ry: Math.abs(y - originalY) / 2
           }
+        } else if (this.objectName === 'Line') {
+          change = {
+            stroke: this.fill,
+            x1: originalX,
+            y1: originalY,
+            x2: Math.abs(x),
+            y2: Math.abs(y)
+          }
         }
-        this.current.set(change)
+        this.current.set({ ...change })
         this.canvas.renderAll()
       },
       onMouseUp() {
         if (this.objectName === 'Paint') {
           return
         }
-        if (this.current) {
-          this.canvas.add(this.current)
-        }
         this.current = null
         this.canvas.renderAll()
+
+        this.canvas.selection = true
       }
     },
     watch: {
@@ -191,11 +199,12 @@
         if (value) {
           if (value === 'Paint') {
             this.canvas.isDrawingMode = true
+            this.canvas.isDrawingMode = true
+            this.canvas.freeDrawingBrush.width = 4
+            this.canvas.freeDrawingBrush.color = this.fill
           } else if (value === 'DELETE-ALL') {
             this.canvas.clear()
           }
-        } else {
-          this.canvas.selection = false
         }
       }
     },

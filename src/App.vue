@@ -19,7 +19,7 @@
 </template>
 
 <script>
-import VueFabricjsWrapper from '@/components/VueFabricjsWrapper'
+import VueFabricjsWrapper from '../'
 
 export default {
   name: 'App',
@@ -35,7 +35,7 @@ export default {
         'Rect',
         'Ellipse',
         'Paint',
-        // 'Line',
+        'Line',
         // 'Polygon',
         // 'Polyline',
         'DELETE-ALL',
